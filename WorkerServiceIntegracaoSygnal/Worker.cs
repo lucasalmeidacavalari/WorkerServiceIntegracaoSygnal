@@ -22,12 +22,12 @@ namespace WorkerServiceIntegracaoSygnal
 
         public override Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("🚀 Serviço iniciado.");
+            LogInfo("🚀 Serviço iniciado.");
 
             _driver = SetupWebDriver();
             if (_driver == null)
             {
-                _logger.LogError("⚠️ Nenhum navegador compatível encontrado.");
+                LogError("⚠️ Nenhum navegador compatível encontrado.");
                 return Task.CompletedTask;
             }
 
@@ -39,7 +39,7 @@ namespace WorkerServiceIntegracaoSygnal
 
         public override Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("🛑 Serviço interrompido.");
+            LogInfo("🛑 Serviço interrompido.");
             _driver?.Quit();
             _driver = null;
             return base.StopAsync(cancellationToken);
@@ -57,19 +57,19 @@ namespace WorkerServiceIntegracaoSygnal
 
                     if (dadosEncontrados)
                     {
-                        _logger.LogInformation("⏳ Aguardando 10 minutos antes da próxima execução...");
+                        LogInfo("⏳ Aguardando 10 minutos antes da próxima execução...");
                         await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
                     }
                     else
                     {
-                        _logger.LogWarning("⚠️ Nenhum dado encontrado. Tentando novamente agora...");
-                        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken); // Pequeno delay antes de tentar de novo
+                        LogWarning("⚠️ Nenhum dado encontrado. Tentando novamente agora...");
+                        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                     }
                 }
                 else
                 {
-                    _logger.LogInformation($"⏳ Fora do horário de operação ({_horaParaAnaliseInicio} - {_horaParaAnaliseFim}).");
-                    await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken); // Mantém o intervalo se estiver fora do horário
+                    LogInfo($"⏳ Fora do horário de operação ({_horaParaAnaliseInicio} - {_horaParaAnaliseFim}).");
+                    await Task.Delay(TimeSpan.FromMinutes(10), stoppingToken);
                 }
             }
         }
@@ -77,13 +77,13 @@ namespace WorkerServiceIntegracaoSygnal
         private async Task<bool> Atualiza()
         {
             var loginUrl = "https://www.sygnal.ai/account/sign-in.html";
-            var targetUrl = "https://www.sygnal.ai/subscriptions/subscribed-signals.html?productserviceid=49&productname=PlatinumPulse%20by%20FIT&scid=cus_RxvuYjYykpDcEl";
+            var targetUrl = "https://www.sygnal.ai/subscriptions/subscribed-signals.html";
             string email = "itasouza@yahoo.com.br";
             string password = "Root#0123";
 
             if (_driver == null)
             {
-                _logger.LogError("❌ WebDriver não inicializado.");
+                LogError("❌ WebDriver não inicializado.");
                 return false;
             }
 
@@ -91,7 +91,8 @@ namespace WorkerServiceIntegracaoSygnal
             {
                 if (!CheckIfLoggedIn(targetUrl))
                 {
-                    _logger.LogInformation("🔑 Realizando login...");
+                    Console.Clear();
+                    LogInfo("🔑 Realizando login...");
                     _driver.Navigate().GoToUrl(loginUrl);
                     WebDriverWait wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(10));
 
@@ -107,7 +108,7 @@ namespace WorkerServiceIntegracaoSygnal
                     passwordField.SendKeys(password);
                     loginButton.Click();
 
-                    _logger.LogInformation("⏳ Aguardando login ser processado...");
+                    LogInfo("⏳ Aguardando login ser processado...");
                     await Task.Delay(5000);
 
                     try
@@ -115,7 +116,7 @@ namespace WorkerServiceIntegracaoSygnal
                         IWebElement errorMessage = _driver.FindElement(By.Id("failedLogin"));
                         if (errorMessage.Displayed)
                         {
-                            _logger.LogError("❌ Login falhou. Verifique as credenciais.");
+                            LogError("❌ Login falhou. Verifique as credenciais.");
                             return false;
                         }
                     }
@@ -123,35 +124,36 @@ namespace WorkerServiceIntegracaoSygnal
 
                     if (!CheckIfLoggedIn(targetUrl))
                     {
-                        _logger.LogError("❌ Login falhou mesmo sem mensagem de erro.");
+                        LogError("❌ Login falhou mesmo sem mensagem de erro.");
                         return false;
                     }
                 }
 
-                _logger.LogInformation("✅ Login confirmado, acessando os dados...");
+                LogInfo("✅ Login confirmado, acessando os dados...");
                 _driver.Navigate().GoToUrl(targetUrl);
                 await Task.Delay(3000);
+                Console.Clear();
 
                 var forexDataList = ExtractTableData();
 
                 if (forexDataList.Any())
                 {
-                    _logger.LogInformation("✅ Dados extraídos com sucesso:");
+                    LogInfo("✅ Dados extraídos com sucesso:");
                     foreach (var data in forexDataList)
                     {
-                        _logger.LogInformation(data.ToString());
+                        LogInfo(data.ToString());
                     }
-                    return true; // ✅ Dados encontrados
+                    return true;
                 }
                 else
                 {
-                    _logger.LogWarning("⚠️ Nenhum dado encontrado na tabela.");
-                    return false; // ❌ Nenhum dado encontrado
+                    LogWarning("⚠️ Nenhum dado encontrado na tabela.");
+                    return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError($"❌ Erro ao atualizar: {ex.Message}");
+                LogError($"❌ Erro ao atualizar: {ex.Message}");
                 return false;
             }
         }
@@ -164,7 +166,6 @@ namespace WorkerServiceIntegracaoSygnal
             {
                 WebDriverWait wait = new WebDriverWait(_driver, TimeSpan.FromSeconds(20));
 
-                // 🔹 Aguarda a tabela ser carregada
                 IWebElement table = wait.Until(d => d.FindElement(By.Id("watchtable")));
                 IWebElement tbody = wait.Until(d => table.FindElement(By.TagName("tbody")));
 
@@ -172,10 +173,9 @@ namespace WorkerServiceIntegracaoSygnal
 
                 if (rows.Count == 0)
                 {
-                    _logger.LogWarning("⚠️ Nenhuma linha encontrada na tabela.");
+                    LogWarning("⚠️ Nenhuma linha encontrada na tabela.");
                 }
 
-                // 🔹 Carrega os símbolos da configuração
                 var listaDeSymbolos = Config.GetAppSettings("ListaDeSymbolos")?.Split(';').ToList() ?? new List<string>();
 
                 foreach (var row in rows)
@@ -183,7 +183,6 @@ namespace WorkerServiceIntegracaoSygnal
                     var columns = row.FindElements(By.TagName("td"));
                     if (columns.Count < 6) continue;
 
-                    // 🔹 Captura o nome e símbolo
                     var symbolElements = columns[2].FindElements(By.TagName("p"));
                     if (symbolElements.Count < 2) continue;
 
@@ -192,35 +191,48 @@ namespace WorkerServiceIntegracaoSygnal
 
                     if (!listaDeSymbolos.Contains(symbol)) continue;
 
-                    // 🔹 Modelo
                     string model = columns[3].FindElement(By.TagName("a")).Text.Trim();
 
-                    // 🔹 Signal (valor principal e secundário)
                     var signalElements = columns[4].FindElements(By.TagName("p"));
                     string signalValue = signalElements[0].Text.Trim();
                     string signalText = signalElements.Count > 1 ? signalElements[1].Text.Trim() : "";
 
-                    // 🔹 Previous (valor principal e secundário)
                     var previousElements = columns[5].FindElements(By.TagName("p"));
                     string previousValue = previousElements.Count > 0 ? previousElements[0].Text.Trim() : "";
                     string previous7d = previousElements.Count > 1 ? previousElements[1].Text.Trim() : "";
 
-                    // 🔹 Última atualização
                     string updated = columns[7].FindElement(By.TagName("p")).Text.Trim();
 
                     forexDataList.Add(new Sygnal(symbol, name, model, signalValue, signalText, previousValue, previous7d, updated));
                 }
 
-                _logger.LogInformation($"✅ Extraídos {forexDataList.Count} sinais com sucesso.");
+                LogInfo($"✅ Extraídos {forexDataList.Count} sinais com sucesso.");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"❌ Erro ao processar tabela: {ex.Message}");
+                LogError($"❌ Erro ao processar tabela: {ex.Message}");
             }
 
             return forexDataList;
         }
 
+        private void LogInfo(string message)
+        {
+            _logger.LogInformation(message);
+            Console.WriteLine(message);
+        }
+
+        private void LogWarning(string message)
+        {
+            _logger.LogWarning(message);
+            Console.WriteLine(message);
+        }
+
+        private void LogError(string message)
+        {
+            _logger.LogError(message);
+            Console.WriteLine(message);
+        }
 
         private static IWebDriver SetupWebDriver()
         {
