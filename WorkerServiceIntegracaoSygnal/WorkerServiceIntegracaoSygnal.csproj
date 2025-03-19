@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-WorkerServiceIntegracaoSygnal-ce65c90a-dd9e-477f-a3a8-d8b2d37972e1</UserSecretsId>
+  </PropertyGroup>
+
+ <ItemGroup>
+	  <PackageReference Include="AngleSharp" Version="1.2.0" />
+	  <PackageReference Include="HtmlAgilityPack" Version="1.12.0" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
+	  <PackageReference Include="Selenium.Chrome.WebDriver" Version="85.0.0" />
+	  <PackageReference Include="Selenium.Firefox.WebDriver" Version="0.27.0" />
+	  <PackageReference Include="Selenium.Support" Version="4.29.0" />
+	  <PackageReference Include="Selenium.WebDriver" Version="4.29.0" />
+	  <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+	  <PackageReference Include="System.Data.SqlClient" Version="4.9.0" />
+  </ItemGroup>
+</Project>
